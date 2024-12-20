@@ -1,0 +1,102 @@
+#IMPORT DATA
+SHOW DATABASES;
+USE latihan_mysql;
+CREATE TABLE ecommerce (
+event_date DATE NOT NULL,
+event_type VARCHAR(100),
+product_id INT,
+category VARCHAR(100),
+subcategory VARCHAR(100),
+brand VARCHAR(100),
+price INT,
+user_id VARCHAR(100),
+user_session VARCHAR(100)
+);
+LOAD DATA INFILE 'D:\\IRSAN\\@ LAMAR KERJA\\Latihan\\ecommerce_event.csv'
+INTO TABLE ecommerce
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS ;
+SHOW TABLES;
+DESC ecommerce;
+SELECT * FROM ecommerce;
+
+#MELIHAT JUMLAH USER SESSION DAN MAX, MIN, AVERAGE PRICE
+SELECT COUNT(DISTINCT user_session) total_session, MIN(price) MIN, MAX(price) MAX, ROUND(AVG(price)) AVG
+FROM ecommerce
+WHERE event_type = "view";
+
+#menampilkan Total Unique product_id. filter merek yang dimulai dengan huruf ‘a’ atau ‘k’, dan tanggal setelah ‘2019–10–04’
+SELECT Count(DISTINCT product_id) total_unique_id
+FROM ecommerce
+WHERE (brand LIKE "a%" or brand LIKE "k%") AND event_date >'2019-10-04';
+
+#From the ecommerce_event table, write a SQL query to output the total unique product and total unique user, for every order date. Only show the date above 04 august 2019, and sort the result by the latest date.
+SELECT COUNT(DISTINCT product_id) Total_product, COUNT(DISTINCT user_id) Total_user, event_date
+FROM ecommerce
+WHERE event_date > '2019-08-04'
+GROUP BY event_date
+ORDER BY event_date desc;
+
+#From question 3, filter only dates that have total_product of more than 500
+SELECT COUNT(Distinct product_id) Total_product, COUNT(Distinct user_id) Total_user, event_date
+FROM ecommerce
+WHERE event_date > '2019-08-04'
+GROUP BY event_date
+HAVING Total_product > 500
+ORDER by event_date desc;
+
+#From the event and user table, which gender has more sessions in October 2019?
+CREATE TABLE user_profile (
+user_id CHAR(100),
+gender CHAR(100),
+age DECIMAL
+);
+LOAD DATA INFILE 'D:\\IRSAN\\@ LAMAR KERJA\\Latihan\\user_profile.csv'
+INTO TABLE user_profile
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS ;
+SHOW TABLES;
+SELECT*FROM user_profile;
+
+SELECT u.gender, COUNT(DISTINCT e.user_session) total_session
+FROM ecommerce e
+JOIN user_profile u on u.user_id = e.user_id
+WHERE e.event_date BETWEEN '2019-10-01' and '2019-10-31'
+GROUP BY u.gender;
+
+#From the event and user table, is it true that iPhone has more dominated by females and Samsung is dominated by males?
+SELECT u.gender, COUNT(DISTINCT e.user_id) total_user, e.brand
+FROM ecommerce e
+JOIN user_profile u on e.user_id = u.user_id
+WHERE e.brand IN ("samsung","apple")
+GROUP by brand, gender;
+
+# From the event and user table, show the total user, product, and session, in every age. Exclude age with total_user more than 320.
+Select u.age, COUNT(DISTINCT e.user_id) total_user, COUNT(DISTINCT e.product_id) total_product, COUNT(DISTINCT e.user_session) total_session
+FROM ecommerce e
+JOIN user_profile u on e.user_id = u.user_id
+GROUP by u.age
+HAVING total_user < 320;
+
+#Calculate the daily revenue and unique users for each date
+SELECT ROUND(SUM(price)) Revenue, COUNT(DISTINCT user_id) total_user, event_date
+FROM ecommerce
+WHERE event_type = "purchase"
+GROUP by event_date
+ORDER BY event_date;
+
+#Calculate the daily revenue and unique users for each date for male users
+SELECT ROUND(SUM(e.price)) Revenue, COUNT(DISTINCT e.user_id) total_user, e.event_date
+FROM ecommerce e
+JOIN user_profile u on e.user_id = u.user_id
+WHERE e.event_type = "purchase" and u.gender = "Male"
+GROUP BY e.event_date
+ORDER BY e.event_date;
+
+#Calculate the daily average revenue per user (Revenue/ # users) for dates with revenue higher than 3000
+SELECT event_date, ROUND(SUM(price)) Revenue, ROUND(SUM(price)/COUNT(DISTINCT user_id)) ARPU
+FROM ecommerce
+WHERE event_type = "purchase"
+GROUP by event_date
+HAVING Revenue > 3000
+ORDER BY event_date;
